@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Custodia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-white font-[Outfit]">
+    <div class="min-h-screen p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8 flex items-center justify-between">
+                <h1 class="text-4xl font-bold text-blue-400">Gestor de Custodia</h1>
+                <div class="flex items-center gap-3">
+                    <div id="indicadorSync" class="text-xs px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-gray-400">⏺ Iniciando...</div>
+                    <button onclick="sincronizarManual()" class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white text-xs rounded-full transition">🔄 Sync</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Panel Izquierdo: 2 Cuadros -->
+                <div class="lg:col-span-1 space-y-6">
+                    
+                    <!-- Cuadro 1: Empresas en Custodia -->
+                    <div class="bg-slate-900 rounded-lg p-6 border border-slate-800">
+                        <h2 class="text-lg font-semibold mb-4 text-blue-400">📋 Empresas en custodia</h2>
+                        <label class="block text-sm font-semibold text-gray-300 mb-2">Trabajo</label>
+                        <div class="flex gap-2 mb-4">
+                            <select id="empresaSelect" class="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                                <option value="">Seleccionar trabajo...</option>
+                            </select>
+                            <button onclick="eliminarTrabajo()" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm transition" title="Eliminar trabajo seleccionado">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cuadro 2: Nuevo Trabajo -->
+                    <div class="bg-slate-900 rounded-lg p-6 border border-slate-800" id="cuadroNuevoTrabajo">
+                        <h2 class="text-lg font-semibold mb-4 text-green-400">✨ Nuevo Trabajo</h2>
+                        
+                        <!-- Nombre Empresa -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">
+                                Empresa <span class="text-red-400">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="empresa" 
+                                placeholder="Ej: APARAN S.L."
+                                class="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                            <div class="error-message text-xs" id="error-empresa"></div>
+                        </div>
+
+                        <!-- Auditor Concursal -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">
+                                Auditor Concursal <span class="text-gray-500">(opcional)</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="auditor" 
+                                placeholder="Nombre del auditor"
+                                class="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                        </div>
+
+                        <!-- Años de Custodia -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">
+                                Años de Custodia <span class="text-red-400">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                id="anosCustodia" 
+                                min="1" 
+                                max="10"
+                                placeholder="Ej: 3"
+                                class="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                            <div class="error-message text-xs" id="error-anos"></div>
+                        </div>
+
+                        <button onclick="nuevoTrabajo()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+                            ✨ Crear Trabajo
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Panel Derecho: Tabla de Archivadores -->
+                <div class="lg:col-span-2" id="panelDerechoArchivadores">
+                    <div class="bg-slate-900 rounded-lg p-6 border border-slate-800">
+                        <h2 class="text-lg font-semibold mb-2 text-blue-400">📦 Ingreso de Archivadores</h2>
+                        <div id="empresaActiva" class="mb-6 px-4 py-2 bg-blue-900/40 border border-blue-700 rounded-lg text-blue-200 text-sm font-semibold"></div>
+
+                        <!-- Formulario de ingreso -->
+                        <div class="grid grid-cols-3 gap-4 mb-6 bg-slate-800/30 p-4 rounded-lg">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-2">Año(s) <span class="text-red-400">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="ano" 
+                                    placeholder="Ej: 2023 o 2022/2023"
+                                    class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+                                >
+                                <div class="error-message text-xs" id="error-ano"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-2">Tipo Doc. <span class="text-red-400">*</span></label>
+                                <div class="flex gap-2">
+                                    <select id="tipoDoc" class="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded text-white text-sm focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="ALBARANES">ALBARANES</option>
+                                        <option value="BANCOS">BANCOS</option>
+                                        <option value="CONTRATOS">CONTRATOS</option>
+                                        <option value="DOCUMENTOS LEGALES Y CONSTITUCION">DOCUMENTOS LEGALES Y CONSTITUCION</option>
+                                        <option value="FACTURAS ACREEDORES">FACTURAS ACREEDORES</option>
+                                        <option value="FACTURAS CLIENTES">FACTURAS CLIENTES</option>
+                                        <option value="FACTURAS PROVEEDORES">FACTURAS PROVEEDORES</option>
+                                        <option value="MANUALES">MANUALES</option>
+                                        <option value="PEDIDOS CLIENTES">PEDIDOS CLIENTES</option>
+                                        <option value="PEDIDOS PROVEEDOR">PEDIDOS PROVEEDOR</option>
+                                        <option value="PRESUPUESTOS">PRESUPUESTOS</option>
+                                        <option value="PROYECTOS">PROYECTOS</option>
+                                        <option value="RRHH">RRHH</option>
+                                        <option value="SEGUROS">SEGUROS</option>
+                                    </select>
+                                    <input 
+                                        type="text" 
+                                        id="tipoDocManual" 
+                                        placeholder="✏️"
+                                        title="Escribe manualmente aquí"
+                                        class="w-10 px-2 py-2 bg-slate-800/50 border border-slate-700 rounded text-white text-sm focus:ring-2 focus:ring-blue-500 text-center"
+                                    >
+                                </div>
+                                <div class="error-message text-xs" id="error-tipo"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-300 mb-2">Descripción</label>
+                                <input 
+                                    type="text" 
+                                    id="descripcion" 
+                                    placeholder="Opcional"
+                                    class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded text-white text-sm placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="flex gap-2 mb-6">
+                            <button onclick="agregarArchivador()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded text-sm transition">
+                                ➕ Agregar
+                            </button>
+                            <button onclick="asignarRapido()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded text-sm transition">
+                                ⚡ Asignar Rápido
+                            </button>
+                            <button onclick="descargarExcel()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded text-sm transition">
+                                📊 Descargar Excel
+                            </button>
+                        </div>
+
+                        <!-- Estadísticas -->
+                        <div class="grid grid-cols-3 gap-3 mb-6 text-center text-sm">
+                            <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                                <div class="text-xs text-gray-400">Total Archivadores</div>
+                                <div id="totalArchivadores" class="text-lg font-bold text-blue-400">0</div>
+                            </div>
+                            <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                                <div class="text-xs text-gray-400">BOX Activos</div>
+                                <div id="boxActivos" class="text-lg font-bold text-yellow-400">0</div>
+                            </div>
+                            <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                                <div class="text-xs text-gray-400">BOX Cerrados</div>
+                                <div id="boxCerrados" class="text-lg font-bold text-green-400">0</div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Archivadores Activos -->
+                        <div class="overflow-x-auto bg-slate-800/30 rounded-lg p-4 mb-6 max-h-96 overflow-y-auto">
+                            <table class="w-full text-xs" id="tablaArchivadores">
+                                <thead class="sticky top-0 bg-slate-800 text-gray-300 border-b border-slate-700">
+                                    <tr>
+                                        <th class="text-left py-2 px-2 w-8">✓</th>
+                                        <th class="text-left py-2 px-2">Año</th>
+                                        <th class="text-left py-2 px-2">Tipo</th>
+                                        <th class="text-left py-2 px-2">Descripción</th>
+                                        <th class="text-left py-2 px-2">Destrucción</th>
+                                        <th class="text-left py-2 px-2">BOX</th>
+                                        <th class="text-left py-2 px-2">Contenedor</th>
+                                        <th class="text-center py-2 px-2">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoTabla"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección BOX Cerrados (Debajo) -->
+            <div class="mt-6 bg-slate-900 rounded-lg p-6 border border-slate-800" id="seccionBoxCerrados">
+                <h2 class="text-lg font-semibold mb-4 text-green-400">✅ BOX Cerrados</h2>
+                <div class="overflow-x-auto bg-slate-800/30 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <table class="w-full text-xs" id="tablaBoxCerrados">
+                        <thead class="sticky top-0 bg-slate-800 text-gray-300 border-b border-slate-700">
+                            <tr>
+                                <th class="text-left py-2 px-2">Año</th>
+                                <th class="text-left py-2 px-2">Tipo</th>
+                                <th class="text-left py-2 px-2">Descripción</th>
+                                <th class="text-left py-2 px-2">Destrucción</th>
+                                <th class="text-left py-2 px-2">BOX</th>
+                                <th class="text-left py-2 px-2">Contenedor</th>
+                                <th class="text-center py-2 px-2">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaBoxCerrados"></tbody>
+                    </table>
+                    <div id="sinBoxCerrados" class="text-center py-8 text-gray-500">
+                        No hay BOX cerrados aún
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .error-message { color: #f87171; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
+        .error-message.show { display: block; }
+        [type="number"]::-webkit-outer-spin-button,
+        [type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        [type="number"] { -moz-appearance: textfield; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script>
+        // ================================================
+        // CONFIGURACIÓN JSONBIN
+        // Instrucciones:
+        // 1. Ve a https://jsonbin.io y crea una cuenta gratis
+        // 2. En el panel, ve a "API Keys" y copia tu Master Key
+        // 3. Pégala en JSONBIN_API_KEY (entre las comillas)
+        // 4. La primera vez que abras la app se creará el bin automáticamente
+        // ================================================
+        const JSONBIN_API_KEY = 'PON_AQUI_TU_API_KEY';
+        const JSONBIN_BIN_ID_KEY = 'custodia_bin_id'; // clave en localStorage para guardar el ID del bin
+        const JSONBIN_BIN_ID_FIJO = '6a02242dc0954111d80b4959'; // ID fijo compartido entre portátiles
+
+        const estadoApp = {
+            trabajos: {},
+            trabajoActual: null,
+            sincronizando: false,
+            binId: null
+        };
+
+        function mostrarSync(texto, color) {
+            const el = document.getElementById('indicadorSync');
+            if (!el) return;
+            el.textContent = texto;
+            el.className = `text-xs px-3 py-1 rounded-full border ${
+                color === 'green' ? 'bg-green-900 border-green-700 text-green-300' :
+                color === 'red'   ? 'bg-red-900 border-red-700 text-red-300' :
+                color === 'yellow'? 'bg-yellow-900 border-yellow-700 text-yellow-300' :
+                'bg-slate-800 border-slate-700 text-gray-400'
+            }`;
+        }
+
+        async function cargarDatos() {
+            if (JSONBIN_API_KEY === 'PON_AQUI_TU_API_KEY') {
+                // Sin configurar → modo local
+                const guardado = localStorage.getItem('trabajosCustodia');
+                if (guardado) estadoApp.trabajos = JSON.parse(guardado);
+                actualizarListaEmpresas();
+                mostrarSync('⚫ Modo local (sin sync)', 'gray');
+                return;
+            }
+
+            mostrarSync('🔄 Cargando...', 'yellow');
+            estadoApp.binId = localStorage.getItem(JSONBIN_BIN_ID_KEY);
+
+            try {
+                // Usar siempre el ID fijo compartido entre portátiles
+                estadoApp.binId = JSONBIN_BIN_ID_FIJO;
+                localStorage.setItem(JSONBIN_BIN_ID_KEY, estadoApp.binId);
+                const resp = await fetch(`https://api.jsonbin.io/v3/b/${estadoApp.binId}/latest`, {
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                });
+                if (!resp.ok) throw new Error('Error leyendo bin');
+                const data = await resp.json();
+                estadoApp.trabajos = data.record.trabajos || {};
+                actualizarListaEmpresas();
+                mostrarSync('🟢 Sincronizado', 'green');
+                // Sincronizar cada 30 segundos
+                setInterval(sincronizarDesdeBin, 30000);
+            } catch(e) {
+                console.error('JSONBin error:', e);
+                // Fallback a local
+                const guardado = localStorage.getItem('trabajosCustodia');
+                if (guardado) estadoApp.trabajos = JSON.parse(guardado);
+                actualizarListaEmpresas();
+                mostrarSync('⚠️ Error sync - usando local', 'red');
+            }
+        }
+
+        async function guardarDatos() {
+            // Siempre guardar local como backup
+            localStorage.setItem('trabajosCustodia', JSON.stringify(estadoApp.trabajos));
+
+            if (JSONBIN_API_KEY === 'PON_AQUI_TU_API_KEY' || !estadoApp.binId) return;
+            if (estadoApp.sincronizando) return;
+
+            estadoApp.sincronizando = true;
+            mostrarSync('🔄 Guardando...', 'yellow');
+            try {
+                await fetch(`https://api.jsonbin.io/v3/b/${estadoApp.binId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify({ trabajos: estadoApp.trabajos })
+                });
+                mostrarSync('🟢 Guardado ✓', 'green');
+                setTimeout(() => mostrarSync('🟢 Sincronizado', 'green'), 2000);
+            } catch(e) {
+                console.error('Error guardando en JSONBin:', e);
+                mostrarSync('⚠️ Error al guardar', 'red');
+            }
+            estadoApp.sincronizando = false;
+        }
+
+        async function sincronizarDesdeBin() {
+            if (!estadoApp.binId || estadoApp.sincronizando) return;
+            try {
+                const resp = await fetch(`https://api.jsonbin.io/v3/b/${estadoApp.binId}/latest`, {
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                });
+                const data = await resp.json();
+                estadoApp.trabajos = data.record.trabajos || {};
+                actualizarListaEmpresas();
+                actualizarVista();
+            } catch(e) {}
+        }
+
+        async function sincronizarManual() {
+            await sincronizarDesdeBin();
+            mostrarSync('🟢 Sincronizado ✓', 'green');
+            setTimeout(() => mostrarSync('🟢 Sincronizado', 'green'), 2000);
+        }
+
+        function actualizarListaEmpresas() {
+            const select = document.getElementById('empresaSelect');
+            select.innerHTML = '<option value="">Seleccionar trabajo...</option>';
+            Object.keys(estadoApp.trabajos).forEach(id => {
+                const trabajo = estadoApp.trabajos[id];
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = trabajo.empresa;
+                select.appendChild(option);
+            });
+        }
+
+        document.getElementById('empresaSelect').addEventListener('change', (e) => {
+            if (e.target.value) {
+                cargarTrabajo(e.target.value);
+                // Mostrar secciones de archivadores
+                document.getElementById('panelDerechoArchivadores').style.display = 'block';
+                document.getElementById('seccionBoxCerrados').style.display = 'block';
+            } else {
+                // Mostrar cuadro "Nuevo Trabajo" si se deselecciona
+                document.getElementById('cuadroNuevoTrabajo').style.display = 'block';
+                document.getElementById('panelDerechoArchivadores').style.display = 'none';
+                document.getElementById('seccionBoxCerrados').style.display = 'none';
+                document.getElementById('cuerpoTabla').innerHTML = '';
+                document.getElementById('cuerpoTablaBoxCerrados').innerHTML = '';
+                document.getElementById('sinBoxCerrados').style.display = 'block';
+                document.getElementById('totalArchivadores').textContent = '0';
+                document.getElementById('boxActivos').textContent = '0';
+                document.getElementById('boxCerrados').textContent = '0';
+                
+                // Limpiar campos de "Nuevo Trabajo"
+                limpiarFormularioNuevoTrabajo();
+                
+                // Resetear estado
+                estadoApp.trabajoActual = null;
+            }
+        });
+
+        function nuevoTrabajo() {
+            const empresa = document.getElementById('empresa').value.trim();
+            const anosCustodia = parseInt(document.getElementById('anosCustodia').value);
+            
+            if (!empresa) {
+                mostrarError('error-empresa', 'Campo obligatorio');
+                return;
+            }
+            if (!anosCustodia || anosCustodia < 1) {
+                mostrarError('error-anos', 'Debe ser mayor a 0');
+                return;
+            }
+
+            const id = Date.now().toString();
+            estadoApp.trabajos[id] = {
+                empresa,
+                auditor: document.getElementById('auditor').value,
+                anosCustodia,
+                registros: [],
+                numerosContenedorBloqueados: [],
+                boxCerrados: []
+            };
+
+            estadoApp.trabajoActual = id;
+            guardarDatos();
+            actualizarListaEmpresas();
+            document.getElementById('empresaSelect').value = id;
+            limpiarFormularioNuevoTrabajo();
+            document.getElementById('cuadroNuevoTrabajo').style.display = 'none';
+            document.getElementById('panelDerechoArchivadores').style.display = 'block';
+            document.getElementById('seccionBoxCerrados').style.display = 'block';
+            actualizarVista();
+        }
+
+        function cargarTrabajo(id) {
+            estadoApp.trabajoActual = id;
+            const trabajo = estadoApp.trabajos[id];
+            document.getElementById('empresa').value = trabajo.empresa;
+            document.getElementById('auditor').value = trabajo.auditor || '';
+            document.getElementById('anosCustodia').value = trabajo.anosCustodia;
+            
+            // Ocultar cuadro "Nuevo Trabajo"
+            document.getElementById('cuadroNuevoTrabajo').style.display = 'none';
+            
+            actualizarVista();
+        }
+
+        function eliminarTrabajo() {
+            const select = document.getElementById('empresaSelect');
+            const idTrabajo = select.value;
+
+            if (!idTrabajo) {
+                alert('Selecciona un trabajo para eliminar');
+                return;
+            }
+
+            const trabajo = estadoApp.trabajos[idTrabajo];
+            if (confirm(`¿Estás seguro de que deseas eliminar el trabajo "${trabajo.empresa}"? Esta acción no se puede deshacer.`)) {
+                delete estadoApp.trabajos[idTrabajo];
+                
+                if (estadoApp.trabajoActual === idTrabajo) {
+                    estadoApp.trabajoActual = null;
+                }
+
+                guardarDatos();
+                actualizarListaEmpresas();
+                
+                // Limpiar formulario
+                document.getElementById('empresa').value = '';
+                document.getElementById('auditor').value = '';
+                document.getElementById('anosCustodia').value = '';
+                document.getElementById('cuerpoTabla').innerHTML = '';
+                document.getElementById('cuerpoTablaBoxCerrados').innerHTML = '';
+                document.getElementById('sinBoxCerrados').style.display = 'block';
+                
+                alert('Trabajo eliminado correctamente');
+            }
+        }
+
+        function agregarArchivador() {
+            if (!estadoApp.trabajoActual) {
+                alert('Selecciona o crea un trabajo primero');
+                return;
+            }
+
+            const anoInput = document.getElementById('ano').value.trim();
+            const tipoDocSelect = document.getElementById('tipoDoc').value;
+            const tipoDocManual = document.getElementById('tipoDocManual').value.trim();
+            const descripcion = document.getElementById('descripcion').value.trim();
+
+            // Validar año(s) - puede ser "2023" o "2022/2023"
+            let ano, anoDestruccion;
+            if (!anoInput) {
+                mostrarError('error-ano', 'Campo obligatorio');
+                return;
+            }
+
+            // Extraer el último año para cálculo de destrucción
+            const anosParts = anoInput.split('/').map(a => parseInt(a.trim())).filter(a => !isNaN(a));
+            if (anosParts.length === 0) {
+                mostrarError('error-ano', 'Formato inválido (ej: 2023 o 2022/2023)');
+                return;
+            }
+            ano = anoInput; // Guardamos el texto original (ej: "2022/2023")
+            anoDestruccion = Math.max(...anosParts); // Usamos el año mayor para calcular destrucción
+
+            // Validar tipo de documentación
+            const tipoDoc = tipoDocManual || tipoDocSelect;
+            if (!tipoDoc) {
+                mostrarError('error-tipo', 'Campo obligatorio');
+                return;
+            }
+
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const fechaDestruccion = calcularFechaDestruccion(anoDestruccion, trabajo.anosCustodia);
+
+            const id = Date.now().toString();
+            trabajo.registros.push({
+                id,
+                ano, // Guardamos el texto original (ej: "2022/2023")
+                tipoDoc,
+                descripcion,
+                fechaDestruccion,
+                box: null,
+                contenedor: null,
+                boxBloqueado: false,
+                contenedorBloqueado: false,
+                seleccionado: false
+            });
+
+            guardarDatos();
+            limpiarFormulario();
+            actualizarVista();
+        }
+
+        function calcularFechaDestruccion(ano, anosCustodia) {
+            const fecha = new Date(ano + anosCustodia, 0, 1);
+            return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function actualizarVista() {
+            if (!estadoApp.trabajoActual) return;
+
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+
+            // Mostrar empresa activa
+            const divEmpresa = document.getElementById('empresaActiva');
+            if (divEmpresa) divEmpresa.textContent = '🏢 ' + trabajo.empresa + (trabajo.auditor ? '  ·  Auditor: ' + trabajo.auditor : '') + '  ·  Custodia: ' + trabajo.anosCustodia + ' año' + (trabajo.anosCustodia === 1 ? '' : 's');
+            const registrosActivos = trabajo.registros.filter(r => !r.contenedorBloqueado || !r.boxBloqueado);
+            const boxCerrados = trabajo.boxCerrados || [];
+
+            // Actualizar estadísticas
+            document.getElementById('totalArchivadores').textContent = trabajo.registros.length;
+            const boxsActivos = new Set(registrosActivos.filter(r => r.box).map(r => r.box)).size;
+            document.getElementById('boxActivos').textContent = boxsActivos;
+            document.getElementById('boxCerrados').textContent = boxCerrados.length;
+
+            // Tabla activa
+            const tbody = document.getElementById('cuerpoTabla');
+            tbody.innerHTML = registrosActivos.map(r => `
+                <tr class="border-b border-slate-700 hover:bg-slate-700/30">
+                    <td class="py-2 px-2"><input type="checkbox" ${r.seleccionado ? 'checked' : ''} onchange="toggleSeleccion('${r.id}')"></td>
+                    <td class="py-2 px-2 cursor-pointer" onclick="editarCampo('${r.id}', 'ano')">${r.ano}</td>
+                    <td class="py-2 px-2 cursor-pointer text-xs" onclick="editarCampo('${r.id}', 'tipoDoc')">${r.tipoDoc}</td>
+                    <td class="py-2 px-2 text-xs cursor-pointer" onclick="editarCampo('${r.id}', 'descripcion')">${r.descripcion || '-'}</td>
+                    <td class="py-2 px-2 cursor-pointer" onclick="editarCampo('${r.id}', 'fechaDestruccion')">${r.fechaDestruccion}</td>
+                    <td class="py-2 px-2"><input type="number" value="${r.box || ''}" onchange="guardarCampo('${r.id}', 'box', this.value)" class="w-12 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm"></td>
+                    <td class="py-2 px-2"><input type="number" value="${r.contenedor || ''}" onchange="guardarCampo('${r.id}', 'contenedor', this.value)" class="w-12 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm"></td>
+                    <td class="py-2 px-2 text-center flex gap-1 justify-center">
+                        <button onclick="toggleBloqueo('${r.id}')" class="text-lg">${r.contenedorBloqueado ? '🔒' : '🔓'}</button>
+                        <button onclick="borrarArchivador('${r.id}')" class="text-lg hover:text-red-400 transition" title="Borrar archivador">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Tabla BOX cerrados
+            const tbodyBoxCerrados = document.getElementById('cuerpoTablaBoxCerrados');
+            const sinBoxCerrados = document.getElementById('sinBoxCerrados');
+            
+            if (boxCerrados.length > 0) {
+                sinBoxCerrados.style.display = 'none';
+                tbodyBoxCerrados.innerHTML = boxCerrados.map(r => `
+                    <tr class="border-b border-slate-700 hover:bg-slate-700/30">
+                        <td class="py-2 px-2">${r.ano}</td>
+                        <td class="py-2 px-2 text-xs">${r.tipoDoc}</td>
+                        <td class="py-2 px-2 text-xs">${r.descripcion || '-'}</td>
+                        <td class="py-2 px-2">${r.fechaDestruccion}</td>
+                        <td class="py-2 px-2 font-semibold text-blue-400">${r.box}</td>
+                        <td class="py-2 px-2 font-semibold text-green-400">${r.contenedor}</td>
+                        <td class="py-2 px-2 text-center"><button onclick="reactivarBoxCerrado('${r.id}')" class="text-sm bg-red-600 hover:bg-red-700 px-2 py-1 rounded">Reactivar</button></td>
+                    </tr>
+                `).join('');
+            } else {
+                sinBoxCerrados.style.display = 'block';
+                tbodyBoxCerrados.innerHTML = '';
+            }
+        }
+
+        function toggleSeleccion(id) {
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const reg = trabajo.registros.find(r => r.id === id);
+            if (reg) {
+                reg.seleccionado = !reg.seleccionado;
+                guardarDatos();
+                actualizarVista();
+            }
+        }
+
+        function asignarRapido() {
+            if (!estadoApp.trabajoActual) return;
+
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const seleccionados = trabajo.registros.filter(r => r.seleccionado && !r.contenedorBloqueado);
+
+            if (seleccionados.length === 0) {
+                alert('Selecciona archivadores primero');
+                return;
+            }
+
+            const box = prompt('Número de BOX:');
+            const contenedor = prompt('Número de Contenedor:');
+
+            if (box && contenedor) {
+                if (trabajo.numerosContenedorBloqueados.includes(parseInt(contenedor))) {
+                    alert('Este contenedor ya está cerrado');
+                    return;
+                }
+
+                seleccionados.forEach(r => {
+                    r.box = parseInt(box);
+                    r.contenedor = parseInt(contenedor);
+                    r.contenedorBloqueado = true;
+                    r.seleccionado = false;
+                });
+
+                if (!trabajo.numerosContenedorBloqueados.includes(parseInt(contenedor))) {
+                    trabajo.numerosContenedorBloqueados.push(parseInt(contenedor));
+                }
+
+                const registrosContenedorCerrado = trabajo.registros.filter(r => r.contenedor === parseInt(contenedor) && r.contenedorBloqueado);
+                registrosContenedorCerrado.forEach(r => {
+                    if (!trabajo.boxCerrados.find(b => b.id === r.id)) {
+                        trabajo.boxCerrados.push({ ...r });
+                    }
+                });
+
+                trabajo.registros = trabajo.registros.filter(r => !trabajo.boxCerrados.find(b => b.id === r.id));
+
+                guardarDatos();
+                actualizarVista();
+            }
+        }
+
+        function toggleBloqueo(id) {
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const reg = trabajo.registros.find(r => r.id === id);
+            if (reg && reg.contenedor) {
+                reg.contenedorBloqueado = !reg.contenedorBloqueado;
+                if (reg.contenedorBloqueado) {
+                    trabajo.numerosContenedorBloqueados.push(reg.contenedor);
+                    if (!trabajo.boxCerrados.find(b => b.id === id)) {
+                        trabajo.boxCerrados.push({ ...reg });
+                    }
+                    trabajo.registros = trabajo.registros.filter(r => r.id !== id);
+                }
+                guardarDatos();
+                actualizarVista();
+            }
+        }
+
+        function borrarArchivador(id) {
+            if (confirm('¿Estás seguro de que deseas borrar este archivador?')) {
+                const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+                trabajo.registros = trabajo.registros.filter(r => r.id !== id);
+                guardarDatos();
+                actualizarVista();
+            }
+        }
+
+        function reactivarBoxCerrado(id) {
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const index = trabajo.boxCerrados.findIndex(b => b.id === id);
+            if (index > -1) {
+                const registro = { ...trabajo.boxCerrados[index] };
+                registro.contenedorBloqueado = false;
+                trabajo.registros.push(registro);
+                trabajo.boxCerrados.splice(index, 1);
+                guardarDatos();
+                actualizarVista();
+            }
+        }
+
+        function guardarCampo(id, campo, valor) {
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const reg = trabajo.registros.find(r => r.id === id);
+            if (reg) {
+                reg[campo] = isNaN(valor) ? valor : parseInt(valor) || null;
+                guardarDatos();
+            }
+        }
+
+        function editarCampo(id, campo) {
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const reg = trabajo.registros.find(r => r.id === id);
+            if (reg) {
+                const nuevoValor = prompt(`Editar ${campo}:`, reg[campo]);
+                if (nuevoValor !== null) {
+                    reg[campo] = nuevoValor;
+                    guardarDatos();
+                    actualizarVista();
+                }
+            }
+        }
+
+        async function descargarExcel() {
+            if (!estadoApp.trabajoActual) {
+                alert('Selecciona un trabajo primero');
+                return;
+            }
+
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const boxCerrados = trabajo.boxCerrados || [];
+
+            if (boxCerrados.length === 0) {
+                alert('No hay BOX cerrados para exportar');
+                return;
+            }
+
+            // Agrupar por BOX
+            const porBox = {};
+            boxCerrados.forEach(r => {
+                if (!porBox[r.box]) porBox[r.box] = [];
+                porBox[r.box].push(r);
+            });
+
+            // Crear workbook con ExcelJS
+            const ExcelJS = window.ExcelJS;
+            const wb = new ExcelJS.Workbook();
+
+            Object.keys(porBox).sort((a, b) => parseInt(a) - parseInt(b)).forEach(box => {
+                const registros = porBox[box];
+                const ws = wb.addWorksheet(`BOX ${box}`);
+
+                // Fila 1: Empresa
+                ws.getCell('A1').value = `EMPRESA: ${trabajo.empresa}`;
+                ws.getCell('A1').font = { name: 'Verdana', size: 16, bold: true };
+                ws.getRow(1).height = 25;
+
+                // Fila 3: Encabezados
+                const encabezados = ['Nº CONTENEDOR', 'AÑO', 'TIPO', 'DESCRIPCION', 'FECHA DESTRUCCION'];
+                encabezados.forEach((encabezado, idx) => {
+                    const cell = ws.getCell(3, idx + 1);
+                    cell.value = encabezado;
+                    cell.font = { name: 'Verdana', size: 11, bold: true };
+                    cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                });
+
+                // Datos
+                registros.forEach((registro, rowIdx) => {
+                    const row = rowIdx + 4;
+                    ws.getCell(row, 1).value = registro.contenedor;
+                    ws.getCell(row, 1).alignment = { horizontal: 'center', vertical: 'center' };
+                    ws.getCell(row, 2).value = registro.ano;
+                    ws.getCell(row, 2).alignment = { horizontal: 'center', vertical: 'center' };
+                    ws.getCell(row, 3).value = registro.tipoDoc;
+                    ws.getCell(row, 3).alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    ws.getCell(row, 4).value = registro.descripcion || '';
+                    ws.getCell(row, 4).alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    ws.getCell(row, 5).value = registro.fechaDestruccion;
+                    ws.getCell(row, 5).alignment = { horizontal: 'center', vertical: 'center' };
+                });
+
+                // Ajustar anchos
+                ws.columns = [
+                    { width: 18 },  // A - Nº CONTENEDOR
+                    { width: 12 },  // B - AÑO
+                    { width: 35 },  // C - TIPO (ampliada)
+                    { width: 40 },  // D - DESCRIPCION (ampliada)
+                    { width: 22 }   // E - FECHA DESTRUCCION (ampliada)
+                ];
+            });
+
+            // Generar y descargar
+            const buffer = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `custodia_${trabajo.empresa}_${new Date().getTime()}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function descargarCSV() {
+            if (!estadoApp.trabajoActual) return;
+
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            const registros = trabajo.registros.concat(trabajo.boxCerrados || []);
+
+            let csv = 'Año,Tipo,Descripción,Fecha Destrucción,BOX,Contenedor,Estado\n';
+            registros.forEach(r => {
+                csv += `${r.ano},${r.tipoDoc},"${r.descripcion || ''}",${r.fechaDestruccion},${r.box || ''},${r.contenedor || ''},${r.contenedorBloqueado ? 'Cerrado' : 'Activo'}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `custodia_${trabajo.empresa}_${new Date().getTime()}.csv`;
+            a.click();
+        }
+
+        function mostrarError(elementId, mensaje) {
+            const elem = document.getElementById(elementId);
+            if (elem) {
+                elem.textContent = mensaje;
+                elem.classList.add('show');
+                setTimeout(() => elem.classList.remove('show'), 3000);
+            }
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('ano').value = '';
+            document.getElementById('tipoDoc').value = '';
+            document.getElementById('tipoDocManual').value = '';
+            document.getElementById('descripcion').value = '';
+        }
+
+        function limpiarFormularioNuevoTrabajo() {
+            document.getElementById('empresa').value = '';
+            document.getElementById('auditor').value = '';
+            document.getElementById('anosCustodia').value = '';
+        }
+
+        // Inicializar
+        window.addEventListener('load', () => {
+            cargarDatos();
+            if (Object.keys(estadoApp.trabajos).length > 0) {
+                estadoApp.trabajoActual = Object.keys(estadoApp.trabajos)[0];
+                cargarTrabajo(estadoApp.trabajoActual);
+                // Mostrar secciones
+                document.getElementById('panelDerechoArchivadores').style.display = 'block';
+                document.getElementById('seccionBoxCerrados').style.display = 'block';
+                document.getElementById('cuadroNuevoTrabajo').style.display = 'none';
+            } else {
+                // Ocultar secciones si no hay trabajo
+                document.getElementById('panelDerechoArchivadores').style.display = 'none';
+                document.getElementById('seccionBoxCerrados').style.display = 'none';
+                document.getElementById('cuadroNuevoTrabajo').style.display = 'block';
+            }
+
+            // Manejo del campo Tipo Doc manual
+            const selectTipoDoc = document.getElementById('tipoDoc');
+            const inputTipoDocManual = document.getElementById('tipoDocManual');
+
+            // Si escribes en el input manual, limpiar el select
+            inputTipoDocManual.addEventListener('input', () => {
+                if (inputTipoDocManual.value.trim()) {
+                    selectTipoDoc.value = '';
+                }
+            });
+
+            // Si cambias el select, limpiar el input manual
+            selectTipoDoc.addEventListener('change', () => {
+                if (selectTipoDoc.value) {
+                    inputTipoDocManual.value = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
