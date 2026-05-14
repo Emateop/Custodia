@@ -1025,23 +1025,7 @@
                 document.getElementById('cuadroNuevoTrabajo').style.display = 'block';
             }
 
-            // Manejo del campo Tipo Doc manual
-            const selectTipoDoc = document.getElementById('tipoDoc');
-            const inputTipoDocManual = document.getElementById('tipoDocManual');
 
-            // Si escribes en el input manual, limpiar el select
-            inputTipoDocManual.addEventListener('input', () => {
-                if (inputTipoDocManual.value.trim()) {
-                    selectTipoDoc.value = '';
-                }
-            });
-
-            // Si cambias el select, limpiar el input manual
-            selectTipoDoc.addEventListener('change', () => {
-                if (selectTipoDoc.value) {
-                    inputTipoDocManual.value = '';
-                }
-            });
         });
     </script>
 
