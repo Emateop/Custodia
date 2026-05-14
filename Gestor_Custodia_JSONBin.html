@@ -266,7 +266,11 @@
         .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center; }
         .modal-box { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:28px; min-width:340px; max-width:480px; width:90%; }
         #pantallaLogin { position:fixed; inset:0; background:#0f172a; z-index:2000; display:flex; align-items:center; justify-content:center; }
-        @media print { body > * { display:none !important; } #zonaPrint { display:block !important; } }
+        @media print {
+            body > * { display:none !important; }
+            #zonaPrint { display:block !important; }
+            @page { size: 100mm 62mm landscape; margin: 0; }
+        }
         #zonaPrint { display:none; }
         .etiqueta {
             width:62mm; height:100mm; border:1px solid #ccc;
