@@ -416,7 +416,7 @@
                 lista.innerHTML = estadoApp.tiposExtra.map(tipo =>
                     '<div class="flex items-center justify-between px-3 py-2 bg-slate-800 rounded">' +
                     '<span class="text-sm text-white">' + tipo + '</span>' +
-                    '<button onclick="eliminarTipo('' + tipo + '')" class="text-red-400 hover:text-red-300 text-xs px-2 py-1 bg-red-900/30 rounded transition">Eliminar</button>' +
+                    '<button onclick="eliminarTipo(\'' + tipo + '\')" class="text-red-400 hover:text-red-300 text-xs px-2 py-1 bg-red-900/30 rounded transition">Eliminar</button>' +
                     '</div>'
                 ).join('');
             }
