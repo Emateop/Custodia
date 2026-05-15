@@ -744,6 +744,10 @@
             const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
             const reg = trabajo.registros.find(r => r.id === id);
             if (reg && reg.contenedor) {
+                if (!reg.contenedorBloqueado && trabajo.numerosContenedorBloqueados && trabajo.numerosContenedorBloqueados.includes(reg.contenedor)) {
+                    alert('El contenedor ' + reg.contenedor + ' ya está cerrado. Reactívalo desde BOX Cerrados primero.');
+                    return;
+                }
                 reg.contenedorBloqueado = !reg.contenedorBloqueado;
                 if (reg.contenedorBloqueado) {
                     trabajo.numerosContenedorBloqueados.push(reg.contenedor);
@@ -783,6 +787,14 @@
             const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
             const reg = trabajo.registros.find(r => r.id === id);
             if (reg) {
+                if (campo === 'contenedor' && valor) {
+                    const numContenedor = parseInt(valor);
+                    if (trabajo.numerosContenedorBloqueados && trabajo.numerosContenedorBloqueados.includes(numContenedor)) {
+                        alert('El contenedor ' + numContenedor + ' ya está cerrado en este trabajo. Reactívalo primero si quieres usarlo.');
+                        actualizarVista();
+                        return;
+                    }
+                }
                 reg[campo] = isNaN(valor) ? valor : parseInt(valor) || null;
                 guardarDatos();
             }
