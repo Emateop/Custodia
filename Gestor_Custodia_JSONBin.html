@@ -775,10 +775,16 @@
             const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
             const index = trabajo.boxCerrados.findIndex(b => b.id === id);
             if (index > -1) {
+                const numContenedor = trabajo.boxCerrados[index].contenedor;
                 const registro = { ...trabajo.boxCerrados[index] };
                 registro.contenedorBloqueado = false;
                 trabajo.registros.push(registro);
                 trabajo.boxCerrados.splice(index, 1);
+                // Si no quedan más registros cerrados con ese contenedor, liberar el número
+                const quedanCerrados = trabajo.boxCerrados.some(b => b.contenedor === numContenedor);
+                if (!quedanCerrados) {
+                    trabajo.numerosContenedorBloqueados = trabajo.numerosContenedorBloqueados.filter(n => n !== numContenedor);
+                }
                 guardarDatos();
                 actualizarVista();
             }
