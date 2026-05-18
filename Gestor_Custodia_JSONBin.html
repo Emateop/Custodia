@@ -113,6 +113,12 @@
                             <div class="error-message text-xs" id="error-anos"></div>
                         </div>
 
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">Fecha Inicio Custodia</label>
+                            <input type="date" id="fechaInicio"
+                                class="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+
                         <button onclick="nuevoTrabajo()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition text-sm">
                             ✨ Crear Trabajo
                         </button>
@@ -124,7 +130,7 @@
                 <div class="lg:col-span-2" id="panelDerechoArchivadores">
                     <div class="bg-slate-900 rounded-lg p-6 border border-slate-800">
                         <h2 class="text-lg font-semibold mb-2 text-blue-400">📦 Ingreso de Archivadores</h2>
-                        <div id="empresaActiva" class="mb-4 px-4 py-2 bg-blue-900/40 border border-blue-700 rounded-lg text-blue-200 text-sm font-semibold"></div>
+                        <div id="empresaActiva" class="mb-4 px-4 py-2 bg-blue-900/40 border border-blue-700 rounded-lg text-blue-200 text-sm font-semibold cursor-pointer hover:bg-blue-900/60 transition" onclick="abrirModalFichaTrabajo()" title="Pulsa para editar la ficha del trabajo"></div>
 
                         <!-- Formulario de ingreso -->
                         <div class="grid grid-cols-4 gap-4 mb-6 bg-slate-800/30 p-4 rounded-lg">
@@ -414,6 +420,33 @@
             if (!estadoApp.tiposExtra.includes(valor)) { estadoApp.tiposExtra.push(valor); guardarDatos(); }
             cerrarModalNuevoTipo();
         }
+        function abrirModalFichaTrabajo() {
+            if (!estadoApp.trabajoActual) return;
+            const t = estadoApp.trabajos[estadoApp.trabajoActual];
+            document.getElementById('fichaEmpresa').value = t.empresa || '';
+            document.getElementById('fichaAuditor').value = t.auditor || '';
+            document.getElementById('fichaAnosCustodia').value = t.anosCustodia || '';
+            document.getElementById('fichaFechaInicio').value = t.fechaInicio || '';
+            document.getElementById('modalFichaTrabajo').style.display = 'flex';
+        }
+        function cerrarModalFichaTrabajo() {
+            document.getElementById('modalFichaTrabajo').style.display = 'none';
+        }
+        function guardarFichaTrabajo() {
+            const empresa = document.getElementById('fichaEmpresa').value.trim();
+            const anosCustodia = parseInt(document.getElementById('fichaAnosCustodia').value);
+            if (!empresa || !anosCustodia) { alert('Empresa y Años de Custodia son obligatorios'); return; }
+            const t = estadoApp.trabajos[estadoApp.trabajoActual];
+            t.empresa = empresa;
+            t.auditor = document.getElementById('fichaAuditor').value.trim();
+            t.anosCustodia = anosCustodia;
+            t.fechaInicio = document.getElementById('fichaFechaInicio').value || '';
+            guardarDatos();
+            actualizarListaEmpresas();
+            actualizarVista();
+            cerrarModalFichaTrabajo();
+        }
+
         function abrirModalEliminarTipo() {
             const lista = document.getElementById('listaEliminarTipos');
             if (estadoApp.tiposExtra.length === 0) {
@@ -516,6 +549,7 @@
                 empresa,
                 auditor: document.getElementById('auditor').value,
                 anosCustodia,
+                fechaInicio: document.getElementById('fechaInicio').value || '',
                 registros: [],
                 numerosContenedorBloqueados: [],
                 boxCerrados: []
@@ -628,6 +662,7 @@
             guardarDatos();
             limpiarFormulario();
             actualizarVista();
+            document.getElementById('ano').focus();
         }
 
         function calcularFechaDestruccion(ano, anosCustodia) {
@@ -659,9 +694,13 @@
             if (!estadoApp.trabajoActual) return;
             const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
             const divEmpresa = document.getElementById('empresaActiva');
-            if (divEmpresa) divEmpresa.textContent = '🏢 ' + trabajo.empresa
-                + (trabajo.auditor ? '  ·  Auditor: ' + trabajo.auditor : '')
-                + '  ·  Custodia: ' + trabajo.anosCustodia + ' año' + (trabajo.anosCustodia===1?'':'s');
+            if (divEmpresa) {
+                const fechaStr = trabajo.fechaInicio ? '  ·  Inicio: ' + new Date(trabajo.fechaInicio).toLocaleDateString('es-ES') : '';
+                divEmpresa.textContent = '🏢 ' + trabajo.empresa
+                    + (trabajo.auditor ? '  ·  Auditor: ' + trabajo.auditor : '')
+                    + '  ·  Custodia: ' + trabajo.anosCustodia + ' año' + (trabajo.anosCustodia===1?'':'s')
+                    + fechaStr;
+            }
             const registrosActivos = trabajo.registros.filter(r => !r.contenedorBloqueado || !r.boxBloqueado);
             const boxCerrados = trabajo.boxCerrados || [];
 
@@ -992,6 +1031,7 @@
             document.getElementById('empresa').value = '';
             document.getElementById('auditor').value = '';
             document.getElementById('anosCustodia').value = '';
+            document.getElementById('fechaInicio').value = '';
         }
 
         // Inicializar
@@ -1046,6 +1086,35 @@
         <div class="flex gap-3">
             <button onclick="guardarNuevoTipo()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded text-sm">Guardar</button>
             <button onclick="cerrarModalNuevoTipo()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded text-sm">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL FICHA TRABAJO -->
+<div id="modalFichaTrabajo" style="display:none" class="modal-overlay">
+    <div class="modal-box" style="max-width:500px">
+        <h3 class="text-lg font-bold text-blue-400 mb-5">📋 Ficha del Trabajo</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-1">Empresa <span class="text-red-400">*</span></label>
+                <input type="text" id="fichaEmpresa" class="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-1">Auditor Concursal</label>
+                <input type="text" id="fichaAuditor" class="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-1">Años de Custodia <span class="text-red-400">*</span></label>
+                <input type="number" id="fichaAnosCustodia" min="1" max="50" class="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-1">Fecha Inicio Custodia</label>
+                <input type="date" id="fichaFechaInicio" class="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm">
+            </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button onclick="guardarFichaTrabajo()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded text-sm">Guardar</button>
+            <button onclick="cerrarModalFichaTrabajo()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded text-sm">Cancelar</button>
         </div>
     </div>
 </div>
