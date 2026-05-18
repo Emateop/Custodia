@@ -44,6 +44,7 @@
                 <div class="flex items-center gap-3">
                     <div id="indicadorSync" class="text-xs px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-gray-400">⏺ Iniciando...</div>
                     <button onclick="sincronizarManual()" class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white text-xs rounded-full transition">🔄 Sync</button>
+                    <button onclick="repararDatos()" class="px-3 py-1 bg-yellow-700 hover:bg-yellow-600 text-white text-xs rounded-full transition" title="Reparar contenedores bloqueados incorrectamente">🔧 Reparar</button>
                 </div>
             </div>
 
@@ -787,6 +788,19 @@
                 guardarDatos();
                 actualizarVista();
             }
+        }
+
+        function repararDatos() {
+            let reparados = 0;
+            Object.values(estadoApp.trabajos).forEach(trabajo => {
+                const antes = (trabajo.numerosContenedorBloqueados || []).length;
+                recalcularContenedoresBloqueados(trabajo);
+                const despues = trabajo.numerosContenedorBloqueados.length;
+                reparados += antes - despues;
+            });
+            guardarDatos();
+            actualizarVista();
+            alert('Reparación completada. Se liberaron ' + reparados + ' contenedor(es) bloqueados incorrectamente.');
         }
 
         function recalcularContenedoresBloqueados(trabajo) {
