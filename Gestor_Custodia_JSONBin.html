@@ -253,12 +253,14 @@
                     <table class="w-full text-xs" id="tablaBoxCerrados">
                         <thead class="sticky top-0 bg-slate-800 text-gray-300 border-b border-slate-700">
                             <tr id="theadBoxCerrados">
+                                <th class="text-left py-2 px-2 w-8"><input type="checkbox" id="selectAllCerrados" onclick="toggleSeleccionTodosCerrados(this)" title="Seleccionar todos"></th>
                                 <th class="text-left py-2 px-2 cursor-pointer hover:text-white select-none" onclick="ordenarBoxCerrados('ano')">Año <span id="sort-ano"></span></th>
                                 <th class="text-left py-2 px-2 cursor-pointer hover:text-white select-none" onclick="ordenarBoxCerrados('tipoDoc')">Tipo <span id="sort-tipoDoc"></span></th>
                                 <th class="text-left py-2 px-2 cursor-pointer hover:text-white select-none" onclick="ordenarBoxCerrados('descripcion')">Descripción <span id="sort-descripcion"></span></th>
                                 <th class="text-left py-2 px-2 cursor-pointer hover:text-white select-none" onclick="ordenarBoxCerrados('fechaDestruccion')">Destrucción <span id="sort-fechaDestruccion"></span></th>
                                 <th class="text-left py-2 px-2 cursor-pointer hover:text-white select-none" onclick="ordenarBoxCerrados('box')">BOX <span id="sort-box"></span></th>
                                 <th class="text-left py-2 px-2 cursor-pointer hover:text-white select-none" onclick="ordenarBoxCerrados('contenedor')">Contenedor <span id="sort-contenedor">▼</span></th>
+                                <th class="text-center py-2 px-2">Estado</th>
                                 <th class="text-center py-2 px-2">Acción</th>
                             </tr>
                         </thead>
@@ -494,10 +496,14 @@
         function imprimirEtiquetas() {
             const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
             const logoSrc = document.getElementById('logoReduce').src;
+            // Usar seleccionados o todos si no hay ninguno marcado
+            const seleccionados = (trabajo.boxCerrados||[]).filter(r => r.seleccionadaParaImprimir);
+            const aImprimir = seleccionados.length > 0 ? seleccionados : (trabajo.boxCerrados||[]);
             const porContenedor = {};
-            (trabajo.boxCerrados||[]).forEach(r => {
+            aImprimir.forEach(r => {
                 const key = r.box+'_'+r.contenedor;
-                if (!porContenedor[key]) porContenedor[key] = { box:r.box, contenedor:r.contenedor, fechaDestruccion:r.fechaDestruccion };
+                if (!porContenedor[key]) porContenedor[key] = { box:r.box, contenedor:r.contenedor, fechaDestruccion:r.fechaDestruccion, ids: [] };
+                porContenedor[key].ids.push(r.id);
             });
             const etiquetasHTML = Object.values(porContenedor).map(e =>
                 '<div class="etiqueta">' +
@@ -515,7 +521,19 @@
             ).join('');
             document.getElementById('zonaPrint').innerHTML = etiquetasHTML;
             cerrarModalEtiquetas();
-            setTimeout(() => window.print(), 300);
+            // Marcar como impresas después de imprimir
+            setTimeout(() => {
+                window.print();
+                // Marcar los contenedores impresos
+                Object.values(porContenedor).forEach(e => {
+                    e.ids.forEach(id => {
+                        const reg = trabajo.boxCerrados.find(r => r.id === id);
+                        if (reg) { reg.impresa = true; reg.seleccionadaParaImprimir = false; }
+                    });
+                });
+                guardarDatos();
+                actualizarVista();
+            }, 300);
         }
 
         function actualizarListaEmpresas() {
@@ -749,21 +767,38 @@
                     return sortState.asc ? cmp : -cmp;
                 });
                 tbodyBoxCerrados.innerHTML = boxOrdenados.map(r => `
-                    <tr class="border-b border-slate-700 hover:bg-slate-700/30">
+                    <tr class="border-b border-slate-700 ${r.impresa ? 'bg-green-900/20' : 'hover:bg-slate-700/30'}">
+                        <td class="py-2 px-2"><input type="checkbox" class="cerrado-check" data-id="${r.id}" ${r.seleccionadaParaImprimir ? 'checked' : ''}></td>
                         <td class="py-2 px-2 cursor-pointer hover:text-blue-300" onclick="editarCampoCerrado('${r.id}', 'ano')">${r.ano}</td>
                         <td class="py-2 px-2 text-xs cursor-pointer hover:text-blue-300" onclick="editarCampoCerrado('${r.id}', 'tipoDoc')">${r.tipoDoc}</td>
                         <td class="py-2 px-2 text-xs cursor-pointer hover:text-blue-300" onclick="editarCampoCerrado('${r.id}', 'descripcion')">${r.descripcion || '-'}</td>
                         <td class="py-2 px-2 cursor-pointer hover:text-blue-300" onclick="editarCampoCerrado('${r.id}', 'fechaDestruccion')">${r.fechaDestruccion}</td>
                         <td class="py-2 px-2 font-semibold text-blue-400 cursor-pointer hover:text-blue-300" onclick="editarCampoCerrado('${r.id}', 'box')">${r.box}</td>
                         <td class="py-2 px-2 font-semibold text-green-400 cursor-pointer hover:text-green-300" onclick="editarCampoCerrado('${r.id}', 'contenedor')">${r.contenedor}</td>
+                        <td class="py-2 px-2 text-center">${r.impresa ? '<span class="text-xs text-green-400 font-semibold">✅ Impresa</span>' : ''}</td>
                         <td class="py-2 px-2 text-center"><button onclick="reactivarBoxCerrado('${r.id}')" class="text-sm bg-red-600 hover:bg-red-700 px-2 py-1 rounded">Reactivar</button></td>
                     </tr>
                 `).join('');
+                // Registrar cambios en checkboxes después de renderizar
+                document.querySelectorAll('.cerrado-check').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        const id = this.dataset.id;
+                        const reg = trabajo.boxCerrados.find(r => r.id === id);
+                        if (reg) reg.seleccionadaParaImprimir = this.checked;
+                    });
+                });
             } else {
                 sinBoxCerrados.style.display = 'block';
                 tbodyBoxCerrados.innerHTML = '';
             }
                 }
+
+        function toggleSeleccionTodosCerrados(checkbox) {
+            const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
+            if (!trabajo) return;
+            (trabajo.boxCerrados||[]).forEach(r => r.seleccionadaParaImprimir = checkbox.checked);
+            actualizarVista();
+        }
 
         function toggleSeleccion(id) {
             const trabajo = estadoApp.trabajos[estadoApp.trabajoActual];
@@ -1191,7 +1226,7 @@
 <div id="modalEtiquetas" style="display:none" class="modal-overlay">
     <div class="modal-box">
         <h3 class="text-lg font-bold text-orange-400 mb-4">🏷️ Imprimir Etiquetas</h3>
-        <p class="text-sm text-gray-400 mb-4">Se imprimirán etiquetas (62x100mm) de todos los BOX cerrados.</p>
+        <p class="text-sm text-gray-400 mb-4">Se imprimirán etiquetas de los contenedores seleccionados (✓). Si no hay ninguno seleccionado, se imprimen todos.</p>
         <div class="flex gap-3">
             <button onclick="imprimirEtiquetas()" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 rounded text-sm">🖨️ Imprimir</button>
             <button onclick="cerrarModalEtiquetas()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded text-sm">Cancelar</button>
